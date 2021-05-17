@@ -1,0 +1,10 @@
+#!/bin/bash
+
+_execCall() {
+	CMD_STRING="${@:1}"
+	clojure -e "$CMD_STRING"
+}
+
+# EXECUTION
+CMD_STRING="${@:1}"
+_execCall $CMD_STRING

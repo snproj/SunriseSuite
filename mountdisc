@@ -1,0 +1,36 @@
+#!/bin/bash
+
+_mountdisc() {
+	if [ -b /dev/sr0 ]; then
+		echo "/dev/sr0 detected successfully."
+	else
+		echo "ERROR: /dev/sr0 not detected."
+		kill -INT $$
+	fi
+
+	if [ -d ~/mountCD ]; then
+		echo "~/mountCD detected sucessfully."
+	else
+		_createMountCD
+	fi
+
+	sudo mount /dev/sr0 ~/mountCD
+	echo "Disc mounted successfully."
+
+}
+
+_createMountCD() {
+	read -p "Would you like to create ~/mountCD? Y/N" CREATE_ANS
+
+	if [ $CREATE_ANS = "Y" -o $CREATE_ANS = "y" ]; then
+		sudo mkdir ~/mountCD
+	elif [ $CREATE_ANS = "N" -o $CREATE_ANS = "n" ]; then
+		echo "Exiting program."
+		kill -INT $$
+	else
+		_createMountCD
+	fi
+
+}
+
+_mountdisc

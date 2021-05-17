@@ -1,0 +1,234 @@
+#!/bin/bash
+
+GLOBAL_J=0
+GLOBAL_Y=0
+
+GLOBAL_LS_ARR=()
+
+IFS=$'\n'
+
+_print_help() {
+	cat << EOF
+nav is a simple tool for navigating your directory in less
+keystrokes!
+
+If you want, you can technically even execute commands from inside
+it. (NOTE: This has a LOT of glitches and unwanted side-effects
+currently; it makes use of the dreaded 'exec'... so use it at your
+own risk! This functionality can be disabled with an argument as seen
+later.)
+
+~~~~~~~~~~~~~~~~~~~~~~~~~ USING NAV: BASICS ~~~~~~~~~~~~~~~~~~~~~~~~~
+nav makes use of 'ls' to list your directory contents with numbers
+beside them. To navigate to one of them, key in that number and press
+ENTER, plain and simple! To go back, use '..'. And if you have
+'just-nav' mode disabled, ANYTHING ELSE will be exec-ed as a command!
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+~~~~~~~~~~~~~~~~~~~~ ARGUMENTS WHEN STARTING NAV ~~~~~~~~~~~~~~~~~~~~
+-e or --exposit
+	Display the contents of the current directory without
+	interactivity.
+
+	NOTE! ALWAYS PLACE THIS ARGUMENT LAST! THE PROGRAM WILL DISPLAY
+	AND EXIT AS SOON AS IT PARSES THIS!
+
+-? or --help
+	Display this help page.
+
+	NOTE! '-h' DOES NOT TRIGGER HELP; IT PASSES THE '-h' ARGUMENT TO
+	THE INTERNAL 'ls' COMMAND! (More on this below)
+
+-j or --just-nav
+	A safe mode; disables the internal usage of 'exec' to execute
+	user commands from within nav.
+
+-y or --yump
+	Sets nav up to auto-exit after one directory change.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+~~~~~~~~~~~~~~~~~ CONTROLLING INTERNAL 'ls' COMMAND ~~~~~~~~~~~~~~~~~
+nav uses an internal 'ls' command to facilitate the display of
+directory contents. Thus, it is an option to pass arguments to this
+internal 'ls' command to tweak the display you want.
+
+Any argument you give nav that starts with a hyphen and is not one 
+of the above-listed arguments will be passed to the internal 'ls' 
+command when displaying directories.
+
+Please note however that not all 'ls' arguments may function as
+expected, or indeed at all, with nav.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+~~~~~~~~~~~~~~~~~~ ADDING SOURCE NAV THROUGH ALIAS ~~~~~~~~~~~~~~~~~~
+It is also suggested to alias "snav" for "source nav". This will 
+allow your shift in directory to be retained after moving, although
+there are some disorienting side-effects after launching any program 
+through snav, for example that your working directory might be left
+at some bin directory that nav or that program accessed.
+
+NOTE!!! IF THAT PROGRAM SELF-TERMINATES WITH AN EXIT SIGNAL, YOUR
+ENTIRE TERMINAL SESSION WILL SELF-TERMINATE AS WELL!
+
+Should you choose to alias "snav" for "source nav", this can be done
+by adding the following in its own line in either your .bash_aliases
+or .bashrc files:
+
+		alias snav='source nav'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+EOF
+}
+
+_print_usage() {
+	cat << EOF
+USAGE: nav [<arguments>...]
+
+These arguments can be either for nav itself, or for its internal
+'ls' command (explained further in 'nav --help')
+
+Enter 'nav --help' for further assistance.
+
+NOTE: THE ARGUMENT '-e' or '--exposit' MUST ALWAYS BE THE LAST
+PARAMETER!
+
+EOF
+}
+
+_flag_check() {
+	shopt -s extglob
+	while [ $# -gt 0 ]; do
+		case $1 in
+			-e|--exposit)
+				_show_settings
+				_display
+				kill -INT $$
+				;;
+			-j|--just-nav)
+				GLOBAL_J=1
+				;;
+			-y|--yump)
+				GLOBAL_Y=1
+				;;
+			-\?|--help)
+				_print_help
+				kill -INT $$
+				;;
+			\-*)
+				GLOBAL_LS_ARR+=($1)
+				;;
+			*)
+				_print_usage
+				kill -INT $$
+				;;
+		esac
+
+		shift
+	done
+}
+
+_display() {
+
+	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+	echo "CURRENT DIRECTORY: $PWD"
+	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+	echo ""
+
+	COUNT=1
+	CONT_ARR=()
+	CHOICE=0
+	for content in `ls ${GLOBAL_LS_ARR[@]} $PWD`; do
+		CONT_ARR+=($content)
+		echo "$COUNT: ${CONT_ARR[COUNT-1]}"
+		((COUNT=COUNT+1))
+	done
+}
+
+_choice() {
+	echo ""
+	_show_settings
+	echo ""
+	read -p "SELECT CHOICE: " CHOICE
+
+	clear
+
+	if echo $CHOICE | grep -x -E "[0-9]+"; then
+		cd ./${CONT_ARR[CHOICE-1]}
+	elif [ $CHOICE = ".." -o $CHOICE = "." ]; then
+		cd $CHOICE
+	elif [ $CHOICE = "cd" ]; then
+		cd
+	elif [ $CHOICE = "," ]; then
+		echo "---------------- EXIT COMMAND DETECTED ----------------"
+		echo "ARGUMENTS PASSED TO 'ls' COMMAND: ${GLOBAL_LS_ARR[*]}"
+		_display
+		echo "---------------- EXIT COMMAND DETECTED ----------------"
+		kill -INT $$
+	else
+		if [ $GLOBAL_J -eq 1 ]; then
+			echo "INVALID INPUT. PLEASE ENTER A NUMBER FROM 1 TO $COUNT."
+			echo ""
+			echo "If you wish to enable execution of user commands from within nav,"
+			echo "activate nav with the '-j' or the '--just-nav' arguments. "
+			echo ""
+			echo "(NOT RECOMMENDED. VERY VERY GLITCHY AND UNPREDICTABLE.)"
+			echo ""
+		else
+			echo "EXECUTING COMMAND: $CHOICE"
+			exec $CHOICE
+		fi
+	fi
+}
+
+_ending() {
+
+	if [ $GLOBAL_Y -eq 1 ]; then
+		_display
+		echo STOP.
+	else
+		_nav_loop
+	fi
+
+}
+
+_show_settings() {
+	if [ $GLOBAL_J -eq 1 ]; then
+		echo "SAFE MODE ('-j' or '--just-nav') ENABLED."
+		echo ""
+	else
+		echo "USER COMMANDS PERMITTED."
+		echo ""
+	fi
+
+	if [ $GLOBAL_Y -eq 1 ]; then
+		echo "NAV WILL AUTO-EXIT AFTER ONE DIRECTORY CHANGE ('-y' or '--yump')."
+		echo ""
+	fi
+
+	if [ ${#GLOBAL_LS_ARR[@]} -gt 0 ]; then
+		echo "ARGUMENTS PASSED TO 'ls' COMMAND: ${GLOBAL_LS_ARR[*]}"
+		echo ""
+	else
+		echo "NO ARGUMENTS PASSED TO 'ls' COMMAND"
+		echo ""
+	fi
+}
+
+_nav_loop() {
+
+	_display
+	_choice
+	_ending
+
+}
+
+_flag_check "$@"
+
+_nav_loop
+
+
+

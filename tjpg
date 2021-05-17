@@ -1,0 +1,20 @@
+#!/bin/bash
+
+_voila() {
+	TARGET_JPEG=$1
+	clear
+	#_zoomOut
+	jp2a $TARGET_JPEG --color-depth=24 --fill --chars=\ \ 
+}
+
+#_zoomOut() {
+#	for (( i=0; i<10; i++ ))
+#	do
+#		xdotool key Ctrl+minus
+#	done
+#}
+
+TARGET_JPEG=$1
+
+# EXECUTION
+_voila $TARGET_JPEG

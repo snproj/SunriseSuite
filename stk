@@ -1,0 +1,143 @@
+#!/bin/bash
+
+COUNT_FLAG=0
+LIST_FLAG=0
+
+STACK=()
+
+if [ -f ~/.stack_config ]; then
+    . ~/.stack_config
+fi
+
+_flag_check() {
+	shopt -s extglob
+	while [ $# -gt 0 ]; do
+		case $1 in
+			-c|--count)
+                COUNT_FLAG=1
+                ;;
+            -l|--list)
+                LIST_FLAG=1
+                ;;
+			-\?|-h|--help)
+				_print_help
+				kill -INT $$
+				;;
+			*)
+				_print_usage
+				kill -INT $$
+				;;
+		esac
+
+		shift
+	done
+}
+
+_print_usage() {
+    cat << EOF
+stack [-c][-l]
+
+Type "stack -h" for further help.
+EOF
+}
+
+_print_help() {
+    cat << EOF
+-c or --count
+    Display total count of stacked items.
+
+-l or --list
+    Display the other items in the stack.
+
+-? or -h or --help
+    Display this help text.
+
+--------------- WHILE RUNNING ---------------
+Key in any entry and press ENTER to push it
+on the stack.
+
+Enter a blank entry in order to pop the last
+entry off the stack.
+
+Enter "," in order to exit.
+---------------------------------------------
+
+EOF
+}
+
+_display_directory() {
+
+    if [ $COUNT_FLAG -eq 1 ]; then
+        _count_display
+    fi
+
+    _normal_display
+
+    if [ $LIST_FLAG -eq 1 ]; then
+        _list_display
+    fi
+
+}
+
+_count_display() {
+    COUNT=${#STACK[@]}
+    echo "COUNT: $COUNT"
+}
+
+_list_display() {
+    INDEX=$((${#STACK[@]}-1))
+    while [ $INDEX -gt 0 ]; do
+        echo ${STACK[INDEX-1]}
+        INDEX=$((INDEX-1))
+    done
+}
+
+_normal_display() {
+
+    echo ""
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~"
+    if [ ${#STACK[@]} -gt 0 ]; then
+        echo "${STACK[${#STACK[@]}-1]}"
+    else
+        STACK=()
+        echo "NO MORE ENTRIES."
+    fi
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~"
+    echo ""
+
+}
+
+_push() {
+    STACK+=("$ENTRY")
+
+    _display_directory
+}
+
+_pop() {
+
+    if [ ${#STACK[@]} -gt 0 ]; then
+        unset STACK[${#STACK[@]}-1]
+    fi
+
+    _display_directory
+
+}
+
+_choice() {
+    read -p "ENTRY: " ENTRY
+
+    clear
+
+    if [ -z "$ENTRY" ]; then
+        _pop
+    elif [ "$ENTRY" = "," ]; then
+        kill -INT $$
+    else
+        _push
+    fi
+
+    _choice
+}
+
+_flag_check $@
+_choice

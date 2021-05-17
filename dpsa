@@ -1,0 +1,11 @@
+#!/bin/bash
+
+_autoStuff(){
+	OUTPUT_NAME="o_$1.html"
+	dps $1 $OUTPUT_NAME && cp $OUTPUT_NAME /mnt/c/WSLTransfer/currTemp.html && cp $OUTPUT_NAME /mnt/c/DualWriter/QuickOutput/currTemp.html
+}
+
+INPUT_NAME=$1
+
+# EXECUTION
+_autoStuff $INPUT_NAME

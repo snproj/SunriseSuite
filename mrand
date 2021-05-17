@@ -1,0 +1,27 @@
+#!/bin/bash
+
+_countLoop() {
+	while true; do
+		echo -en "\r$COUNT"
+		((COUNT=COUNT+1))
+		if [ $COUNT -gt $COUNTMAX ]; then
+			COUNT=$COUNTSTART
+		fi
+	done
+}
+
+_errorPrint() {
+	if [ -z "$1" ]; then
+		echo "You need to give the number of digits!"
+		kill -INT $$
+	fi
+}
+
+# Execution
+_errorPrint $1
+
+COUNTSTART=$((10**($1-1)))
+COUNT=$COUNTSTART
+COUNTMAX=$((($COUNTSTART*10)-1))
+
+_countLoop

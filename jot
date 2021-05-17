@@ -1,0 +1,143 @@
+#!/bin/bash
+
+STORE_DIR="$HOME/.jot"
+DEL_FLAG=0
+CAT_FLAG=1
+ED_FLAG=0
+DOC_STR=""
+EDITOR_CMD="nano"
+
+IFS=$'\n'
+
+if [ -f ~/.jot_config ]; then
+    . ~/.jot_config
+fi
+
+_flag_check() {
+	SPACE_FLAG=0
+	shopt -s extglob
+	while [ $# -gt 0 ]; do
+		case $1 in
+			-d|--delete)
+                CAT_FLAG=0
+				DEL_FLAG=1
+				;;
+			-e|--editor)
+                CAT_FLAG=0
+				ED_FLAG=1
+                ;;
+			*)
+                if [ $SPACE_FLAG -eq 0 ]; then
+                    DOC_STR+="$1"
+                    SPACE_FLAG=1
+                else
+		    DOC_STR+=" $1"
+                fi
+                ;;
+		esac
+
+		shift
+	done
+}
+
+_check_jot_dir() {
+
+    if [ ! -d $STORE_DIR ]; then
+
+        read -p "$STORE_DIR does not exist. Create? Y/N" CREATE_ANS
+
+        if [ $CREATE_ANS = "Y" -o $CREATE_ANS = "y" ]; then
+            mkdir $STORE_DIR
+        elif [ $CREATE_ANS = "N" -o $CREATE_ANS = "n" ]; then
+            _make_jot_dir
+        else
+            _check_jot_dir
+        fi
+
+    else
+        echo "Jot directory detected: $STORE_DIR."
+    fi
+
+}
+
+_make_jot_dir() {
+    read -p "Where would you like to store your jot files? Enter an absolute or a relative path; or else enter 'Q' to exit." MAKE_DIR
+
+        if [ $MAKE_DIR = "Q" -o $MAKE_DIR = "q" ]; then
+            echo "Exiting jot."
+            kill -INT $$
+        else
+            {
+                echo "Creating directory: $MAKE_DIR..."
+                mkdir $MAKE_DIR &&
+                STORE_DIR=$MAKE_DIR
+            } || {
+                echo "Failed to create directory: $MAKE_DIR. Please try again."
+                echo "If this error persists, you might try running this program as root."
+                _make_jot_dir
+            }
+        fi
+
+}
+
+_display() {
+
+	echo ""
+	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+	echo "JOT DIRECTORY: $STORE_DIR"
+	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+	echo ""
+
+    COUNT=1
+    CONT_ARR=()
+    for content in `ls $STORE_DIR`; do
+        CONT_ARR+=($content)
+		echo "$COUNT: ${CONT_ARR[COUNT-1]}"
+        ((COUNT=COUNT+1))
+    done
+
+}
+
+_choice() {
+
+    read -p "SELECT CHOICE: " CHOICE
+
+    if echo $CHOICE | grep -x -E "[0-9]+"; then
+		if [ $CAT_FLAG -eq 1 ]; then
+            cat $STORE_DIR/${CONT_ARR[CHOICE-1]}
+        elif [ $ED_FLAG -eq 1 ]; then
+            $EDITOR_CMD $STORE_DIR/${CONT_ARR[CHOICE-1]}
+        elif [ $DEL_FLAG -eq 1 ]; then
+            rm $STORE_DIR/${CONT_ARR[CHOICE-1]}
+        else
+            echo "CHOICE FUNCTION ERROR"
+        fi
+	elif [ $CHOICE = "," ]; then
+        kill -INT $$
+    else
+		choice
+	fi
+}
+
+_write_and_kill() {
+    if [ ! -z $DOC_STR ]; then
+        cd $STORE_DIR
+
+        TITLE=${DOC_STR%%/*}
+        BODY=${DOC_STR#*/}
+
+        echo "TITLE: $TITLE"
+        echo "BODY: $BODY"
+
+        echo -e "$BODY" >> $TITLE
+
+        kill -INT $$
+    fi
+}
+
+# EXECUTION DIVISION #######################
+_flag_check $@
+_check_jot_dir
+_write_and_kill
+_display
+_choice

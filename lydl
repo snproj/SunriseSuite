@@ -1,0 +1,18 @@
+#!/bin/bash
+
+_errInstall() {
+	cat << EOF
+
+lynx doesn't seem to be installed. This program requires it to run.
+
+EOF
+}
+
+_lynxDumpLess() {
+	URL=$1
+	# Semicolon after _errInstall call is important for some reason lol
+	{ lynx -dump $URL || _errInstall; } | less
+}
+
+# Execution
+_lynxDumpLess $1 

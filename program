@@ -1,0 +1,6 @@
+_func() {
+	URL=$1
+	lynx -dump $URL | less
+}
+
+_func $1

@@ -1,0 +1,25 @@
+#!/bin/bash
+
+_etyWord() {
+	SEARCHWORD="${@:1}"
+	lynx -dump "https://www.etymonline.com/word/$SEARCHWORD"
+}
+
+_etySearch() {
+	SEARCHWORD="${@:1}"
+	lynx -dump "https://www.etymonline.com/search?q=$SEARCHWORD"
+}
+
+_decision() {
+	SEARCHWORD="${@:1}"
+	RESULT=$(_etyWord $SEARCHWORD)
+	GREP_RESULT=$(echo "$RESULT" | grep "404")
+	if [ -z "$GREP_RESULT" ]; then
+		echo "$RESULT" | less
+	else
+		_etySearch $SEARCHWORD | less
+	fi
+}
+
+# Execution
+_decision "${@:1}"
